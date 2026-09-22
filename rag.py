@@ -2,6 +2,7 @@ import os
 import json
 import faiss
 import numpy as np
+import certifi
 
 from dotenv import load_dotenv
 from sentence_transformers import SentenceTransformer
@@ -23,8 +24,18 @@ if not GEMINI_API_KEY:
 
 
 # ==================================
-# Gemini client
+# SSL / Gemini client
 # ==================================
+
+# Use a valid certificate bundle before building the Gemini client.
+# Some local setups set SSL_CERT_FILE to a broken path or leave it empty,
+# which causes the "CERTIFICATE_VERIFY_FAILED" error seen in the traceback.
+cert_file = os.environ.get("SSL_CERT_FILE")
+if not cert_file or not os.path.exists(cert_file):
+    os.environ["SSL_CERT_FILE"] = certifi.where()
+
+if os.environ.get("SSL_CERT_DIR") and not os.path.isdir(os.environ["SSL_CERT_DIR"]):
+    os.environ.pop("SSL_CERT_DIR", None)
 
 client = genai.Client(
     api_key=GEMINI_API_KEY
@@ -136,7 +147,7 @@ def generate_answer(question):
     )
 
     response = client.models.generate_content(
-        model="gemini-2.5-flash",
+        model="gemini-3.6-flash",
         contents=prompt
     )
 
@@ -147,7 +158,7 @@ def generate_answer(question):
 # Test
 # ==================================
 
-question = "How many paid leaves do employees get?"
+question = "How many travel reimbursements are available?"
 
 answer, retrieved_chunks = generate_answer(
     question
